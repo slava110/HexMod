@@ -50,7 +50,8 @@ interface VCDrawHelper {
 
         override fun vcSetupAndSupply(vertMode: VertexFormat.Mode): VertexConsumer {
             val tess = Tesselator.getInstance()
-            val buf = tess.begin(vertMode, DefaultVertexFormat.POSITION_TEX_COLOR)
+            val buf = tess.builder
+            buf.begin(vertMode, DefaultVertexFormat.POSITION_TEX_COLOR)
             RenderSystem.setShader(GameRenderer::getPositionTexColorShader)
             RenderSystem.disableCull()
             RenderSystem.enableDepthTest()
@@ -61,11 +62,11 @@ interface VCDrawHelper {
             return buf
         }
         override fun vertex(vc: VertexConsumer, color: Int, pos: Vec2, uv: Vec2, matrix: Matrix4f){
-            vc.addVertex(matrix, pos.x, pos.y, z).setColor(color).setUv(uv.x, uv.y)
+            vc.vertex(matrix, pos.x, pos.y, z).color(color).uv(uv.x, uv.y)
         }
         override fun vcEndDrawer(vc: VertexConsumer) {
             if(vc is BufferBuilder)
-                BufferUploader.drawWithShader(vc.buildOrThrow())
+                BufferUploader.drawWithShader(vc.end())
         }
     }
 
@@ -85,14 +86,16 @@ interface VCDrawHelper {
                 val layer = RenderType.entityTranslucentCull(texture)
                 layer.setupRenderState()
                 if (provider == null) {
-                    val buf = tess.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
+                    val buf = tess.builder
+                    buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
                     RenderSystem.setShader { GameRenderer.getRendertypeEntityTranslucentCullShader() }
                     return buf
                 } else {
                     return provider.getBuffer(layer)
                 }
             }
-            val buf = tess.begin( vertMode, DefaultVertexFormat.NEW_ENTITY )
+            val buf = tess.builder
+            buf.begin( vertMode, DefaultVertexFormat.NEW_ENTITY )
             // Generally this would be handled by a RenderLayer, but that doesn't seem to actually work here,,
             RenderSystem.setShaderTexture(0, texture)
             RenderSystem.enableDepthTest()
@@ -111,22 +114,22 @@ interface VCDrawHelper {
 
         override fun vertex(vc: VertexConsumer, color: Int, pos: Vec2, uv: Vec2, matrix: Matrix4f){
             val nv = worldlyBits.normal?: Vec3(1.0, 1.0, 1.0)
-            vc.addVertex(matrix, pos.x, pos.y, z)
-                .setColor(color)
-                .setUv(uv.x, uv.y)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(worldlyBits.light?: LightTexture.FULL_BRIGHT )
-                .setNormal(ps.last(), nv.x.toFloat(), nv.y.toFloat(), nv.z.toFloat())
+            vc.vertex(matrix, pos.x, pos.y, z)
+                .color(color)
+                .uv(uv.x, uv.y)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(worldlyBits.light?: LightTexture.FULL_BRIGHT )
+                .normal(ps.last().normal(), nv.x.toFloat(), nv.y.toFloat(), nv.z.toFloat())
         }
         override fun vcEndDrawer(vc: VertexConsumer){
             if(lastVertMode == VertexFormat.Mode.QUADS){
                 if (provider == null && vc is BufferBuilder) {
                     val layer = RenderType.entityTranslucentCull(texture)
-                    layer.draw(vc.buildOrThrow()) //TODO port: , VertexSorting.ORTHOGRAPHIC_Z
+                    layer.end(vc, VertexSorting.ORTHOGRAPHIC_Z) //TODO port: , VertexSorting.ORTHOGRAPHIC_Z
                 }
             } else {
                 if(vc is BufferBuilder)
-                    BufferUploader.drawWithShader(vc.buildOrThrow())
+                    BufferUploader.drawWithShader(vc.end())
                 Minecraft.getInstance().gameRenderer.lightTexture().turnOffLightLayer()
                 RenderSystem.disableBlend()
                 RenderSystem.defaultBlendFunc()

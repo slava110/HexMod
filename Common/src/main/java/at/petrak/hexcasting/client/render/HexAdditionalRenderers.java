@@ -88,19 +88,20 @@ public class HexAdditionalRenderers {
         var colProvider = pigment.getColorProvider();
 
         // Icosahedron inscribed inside the unit sphere
-        var buf = tess.begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
+        var buf = tess.getBuilder();
+        buf.begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL);
 
         BiConsumer<float[], float[]> v = (l, r) -> {
             int lcolor = colProvider.getColor(time, new Vec3(l[0], l[1], l[2])),
                 rcolor = colProvider.getColor(time, new Vec3(r[0], r[1], r[2]));
             var normal = new Vector3f(r[0] - l[0], r[1] - l[1], r[2] - l[2]);
             normal.normalize();
-            buf.addVertex(neo, l[0], l[1], l[2])
-                .setColor(lcolor)
-                .setNormal(ps.last(), normal.x(), normal.y(), normal.z());
-            buf.addVertex(neo, r[0], r[1], r[2])
-                .setColor(rcolor)
-                .setNormal(ps.last(), -normal.x(), -normal.y(), -normal.z());
+            buf.vertex(neo, l[0], l[1], l[2])
+                .color(lcolor)
+                .normal(ps.last().normal(), normal.x(), normal.y(), normal.z());
+            buf.vertex(neo, r[0], r[1], r[2])
+                .color(rcolor)
+                .normal(ps.last().normal(), -normal.x(), -normal.y(), -normal.z());
         };
 
         for (int side = 0; side <= 1; side++) {
